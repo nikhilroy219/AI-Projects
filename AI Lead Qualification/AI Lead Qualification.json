@@ -1,0 +1,699 @@
+{
+  "name": "AI Lead Qualification",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                5
+              ],
+              "triggerAtHour": 16
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "81163950-a14b-431b-a89e-b37da1fff97a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0",
+          "mode": "list",
+          "cachedResultName": "Sales - Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2009592651,
+          "mode": "list",
+          "cachedResultName": "Raw list",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0/edit#gid=2009592651"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Status"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        208,
+        0
+      ],
+      "id": "1dacd5e2-781e-4b33-87d4-25dd01f4849b",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9haJMDRsYnn5Q5Yz",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        416,
+        0
+      ],
+      "id": "e0ec991e-5351-4bbf-8615-804b56514b44",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "YOUR_ANTHROPIC_API_KEY"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-6\",\n  \"max_tokens\": 200,\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"You are a B2B lead qualifier. Using this ruleset: GREEN if the company operates energy assets, industrial facilities, or technology infrastructure in Europe with senior decision-makers in operations, technology or strategy. NOT GREEN if it is a consultancy, government body, university, or has fewer than 50 employees. Qualify this company: {{ $json['Company Name'] }}. Reply with only GREEN or NOT GREEN followed by one sentence explaining why.\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        640,
+        16
+      ],
+      "id": "3282e866-dbca-4797-9a60-87e7801189b2",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "89dba75a-4173-424d-8469-53c74c79d089",
+              "leftValue": "={{ $json.content[0].text.trim() }}",
+              "rightValue": "GREEN",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            },
+            {
+              "id": "fe26acbd-662f-4ccc-bd3d-b520f9a0edd9",
+              "leftValue": "={{ $json.content[0].text.trim() }}",
+              "rightValue": "NOT GREEN",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        848,
+        16
+      ],
+      "id": "19c25e22-5200-4c9e-86fa-84c2abeca897",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0",
+          "mode": "list",
+          "cachedResultName": "Sales - Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2009592651,
+          "mode": "list",
+          "cachedResultName": "Raw list",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0/edit#gid=2009592651"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "Checked",
+            "Output": "NOT GREEN",
+            "Company Name": "={{ $('Loop Over Items').item.json['Company Name'] }}"
+          },
+          "matchingColumns": [
+            "Company Name"
+          ],
+          "schema": [
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Output",
+              "displayName": "Output",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1056,
+        240
+      ],
+      "id": "e5c36d1e-151c-4f46-8538-d6e2e0d6a6c3",
+      "name": "Update row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9haJMDRsYnn5Q5Yz",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_PERPLEXITY_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sonar\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Research this company: {{ $('Loop Over Items').item.json['Company Name'] }}. Find: 1) Their official website URL 2) Their area of specialisation in energy or industrial tech 3) Latest news or development in the last 30 days relevant to their growth, funding, expansion, or partnerships in Europe. Be specific and factual.\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1056,
+        0
+      ],
+      "id": "9a9ce490-c138-4583-9121-09354f62cc7f",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "YOUR_ANTHROPIC_API_KEY"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    model: \"claude-sonnet-4-6\",\n    max_tokens: 1200,\n    messages: [\n      {\n        role: \"user\",\n        content:\n          \"Based on this research:\\n\\n\" +\n          $json.choices[0].message.content +\n          `\n\nReturn exactly one valid raw JSON object using exactly these keys:\n\n{\n  \"company_name\": \"plain text string\",\n  \"aos\": \"plain text string\",\n  \"link\": \"plain text string\",\n  \"news_and_leverage\": \"plain text string\"\n}\n\nStrict rules:\n- Use exactly these four keys and no others.\n- Every value must be a plain string.\n- Do not return nested objects.\n- Do not return arrays.\n- Do not use markdown.\n- Do not use code fences.\n- Do not include any text before or after the JSON.\n- If information is unavailable, use an empty string.\n`\n      }\n    ]\n  }\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1216,
+        0
+      ],
+      "id": "b844ee0d-c519-4e14-a396-7e023c032144",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const response = $json;\n\nif (response.stop_reason === 'max_tokens') {\n  throw new Error('Claude response was truncated. Increase max_tokens.');\n}\n\nconst raw = response.content?.[0]?.text;\n\nif (!raw) {\n  throw new Error('Claude returned no text.');\n}\n\nconst clean = raw\n  .replace(/^```json\\s*/i, '')\n  .replace(/^```\\s*/i, '')\n  .replace(/\\s*```$/i, '')\n  .trim();\n\nlet parsed;\n\ntry {\n  parsed = JSON.parse(clean);\n} catch (error) {\n  throw new Error(\n    `Claude returned invalid JSON: ${error.message}\\n\\n${clean}`\n  );\n}\n\nreturn {\n  json: {\n    company_name: String(parsed.company_name ?? ''),\n    aos: String(parsed.aos ?? ''),\n    link: String(parsed.link ?? ''),\n    news_and_leverage: String(parsed.news_and_leverage ?? ''),\n    last_updated: new Date().toLocaleDateString('en-GB')\n  }\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        -128
+      ],
+      "id": "b4621bfb-e6ee-4865-bf9c-4c4819f72df2",
+      "name": "Code in JavaScript",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0",
+          "mode": "list",
+          "cachedResultName": "Sales - Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1759158682,
+          "mode": "list",
+          "cachedResultName": "Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0/edit#gid=1759158682"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Company Name": "={{ $json.company_name }}",
+            "AOS": "={{ $json.aos }}",
+            "Link": "={{ $json.link }}",
+            "News & Leverage": "={{ $json.news_and_leverage }}",
+            "Last Updated": "={{ $json.last_updated }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AOS",
+              "displayName": "AOS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Link",
+              "displayName": "Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Contact Name",
+              "displayName": "Contact Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Contact Title",
+              "displayName": "Contact Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Deal Stage",
+              "displayName": "Deal Stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "News & Leverage",
+              "displayName": "News & Leverage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Updated",
+              "displayName": "Last Updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1616,
+        0
+      ],
+      "id": "f430b605-859c-474a-907f-8bfba53ac41d",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9haJMDRsYnn5Q5Yz",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0",
+          "mode": "list",
+          "cachedResultName": "Sales - Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 2009592651,
+          "mode": "list",
+          "cachedResultName": "Raw list",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0/edit#gid=2009592651"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Company Name": "={{ $('Loop Over Items').item.json['Company Name'] }}",
+            "Status": "Checked",
+            "Output": "GREEN"
+          },
+          "matchingColumns": [
+            "Company Name"
+          ],
+          "schema": [
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Output",
+              "displayName": "Output",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1808,
+        0
+      ],
+      "id": "70445ac3-45a3-4b17-aa8d-310bdba6a1d6",
+      "name": "Update row in sheet1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9haJMDRsYnn5Q5Yz",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "39bb6ef6-8a60-4807-b304-970ea1d54e9b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e75532bac761378698f9eb62d1bcbf27639bb771c0c3d727042f13ecceb17471"
+  },
+  "id": "K4UMGo7j4DFLVbm7",
+  "tags": []
+}
