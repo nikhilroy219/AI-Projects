@@ -1,95 +1,91 @@
-# Jarvis — Local AI Personal Assistant
+# JARVIS v1 — Setup Guide (no coding experience needed)
 
-A self-hosted personal AI assistant you talk to over Telegram, powered by Claude (Anthropic). Reachable by text or voice from anywhere, it answers with real-time web search, remembers context across sessions, switches between models on demand, and delivers a scheduled daily briefing, all running locally on your own machine with no manual input required.
+Your personal AI assistant: talk to it by text or voice notes on Telegram,
+it answers with Claude's intelligence (and a British voice), knows your
+context, and sends you a morning briefing at 07:30 Berlin time.
 
-## What It Does
+Total setup time: ~20 minutes. You only do this once.
 
-Most people interact with AI through a browser tab they have to open, ask, and close. This project turns Claude into an always-on assistant that lives on your own machine and reaches you on your phone.
+---
 
-Once running, it:
+## Step 1 — Create your private Telegram bot (3 min)
 
-- Listens for messages on a private Telegram bot (text or voice notes)
-- Transcribes voice notes to text (Groq Whisper) and can reply in a natural synthesized voice (Edge TTS)
-- Answers using real-time web search for anything current, not just training data
-- Remembers durable facts about you across restarts, either saved explicitly or captured automatically from conversation
-- Sends a compiled daily briefing on a schedule, unattended, every morning
-- Lets you switch the underlying model mid-conversation to trade off depth, speed, and cost
-- Stays private: only your own Telegram account can talk to it
+1. Open Telegram, search for **@BotFather** (verified, blue check).
+2. Send it: `/newbot`
+3. Give it a name: `JARVIS`
+4. Give it a username, e.g. `nikhil_jarvis_bot` (must end in `bot`).
+5. BotFather replies with a **token** (long string like `7421...:AAH...`).
+   Copy it — you'll need it in Step 4.
 
-## Architecture
+## Step 2 — Get your two API keys (5 min)
 
-bot.py             Telegram interface + orchestration (handlers, scheduler, voice I/O)
-jarvis_context.py  Assistant personality and system prompt
-jarvis_memory.py   Persistent memory (load / save / inspect, stored as JSON)
+- **Anthropic (the brain):** go to https://console.anthropic.com →
+  API Keys → Create Key. Copy it. (You'll need billing set up — typical
+  personal use costs a few euros per month.)
+- **Groq (free, for voice transcription):** go to https://console.groq.com →
+  API Keys → Create. Copy it. Free tier is plenty.
 
-Key design decisions:
+## Step 3 — Install Python (5 min, skip if installed)
 
-- Runs entirely locally against the Anthropic API; no third-party server holds your data
-- The static system prompt is cached while live memory is appended fresh each call, keeping the assistant context-aware without re-sending everything every time
-- Memory is plain, human-readable JSON you can open and edit by hand
-- Owner-lock keyed to a single Telegram chat ID, so the bot ignores everyone else
-- Auto-memory runs after the reply is sent, so it never adds latency to your conversation
+- Download from https://www.python.org/downloads/ (version 3.11+).
+- **Windows:** during install, tick the box "Add Python to PATH".
+- **Mac:** just run the installer.
 
-## Commands
+## Step 4 — Configure Jarvis (3 min)
 
-| Command | Description |
-|---|---|
-| /briefing | Generate the daily news + priorities briefing now |
-| /remember <text> | Save a fact to long-term memory |
-| /memories | List everything it remembers |
-| /forget <n> / /forgetall | Remove one memory / clear all |
-| /automem on or off | Toggle automatic memory saving |
-| /model opus or sonnet or haiku | Switch the underlying model |
-| /voiceon / /voiceoff | Toggle spoken audio replies |
-| /reset | Clear the running conversation context |
+1. Put this `jarvis` folder somewhere permanent, e.g. Documents.
+2. Make a copy of the file `.env.example` and rename the copy to exactly
+   `.env` (yes, starting with a dot).
+3. Open `.env` in any text editor and paste your three keys from
+   Steps 1–2 after the `=` signs. Save.
 
-Plain text or a voice note works any time for normal conversation.
+## Step 5 — Install and launch (3 min)
 
-## Stack
+Open a terminal (Windows: PowerShell / Mac: Terminal), then:
 
-| Tool | Purpose |
-|---|---|
-| Python | Core application |
-| Anthropic Claude | Reasoning, conversation, briefings |
-| python-telegram-bot | Telegram interface and scheduler |
-| Groq Whisper | Voice note transcription (speech-to-text) |
-| Edge TTS | Spoken replies (text-to-speech) |
-
-## Setup
-
-### Prerequisites
-
-- Python 3.11+
-- A Telegram account
-- Anthropic API key
-- Groq API key (free; used for voice transcription)
-
-### Installation
-
-1. Clone this repo
-2. Create a Telegram bot via @BotFather and copy the token
-3. Copy .env.example to .env and fill in your keys:
-
-TELEGRAM_BOT_TOKEN=
-ANTHROPIC_API_KEY=
-GROQ_API_KEY=
-OWNER_CHAT_ID=
-
-4. Install dependencies and run:
-
+```
+cd path/to/your/jarvis folder
 pip install -r requirements.txt
 python bot.py
+```
 
-5. Send /start to your bot. It replies with your chat ID. Put that in .env as OWNER_CHAT_ID to enable the owner-lock and scheduled briefing, then restart.
+When you see `JARVIS online.` — it's alive. Leave that window open.
 
-## Notes
+## Step 6 — First contact
 
-- Runs while the host machine is on and the script is running
-- API keys live only in your local .env and are never committed
-- Built as a personal project to explore always-on, self-hosted AI assistants
+1. In Telegram, open your bot and send: `/start`
+2. It replies with your **chat ID**. Paste that number into `.env` as
+   `OWNER_CHAT_ID`, then restart the bot (Ctrl+C in the terminal, then
+   `python bot.py` again).
+3. Done. Send it a voice note. Say hello to JARVIS.
 
-## Author
+---
 
-Nikhil Roy, Berlin-based operator with a background in project management, business development, and tech and AI workflow automation.
+## Daily use
 
-Portfolio: https://nikhilroy.lovable.app
+| You do | Jarvis does |
+|---|---|
+| Send a voice note | Transcribes it, answers in text + voice |
+| Send text | Answers in text (add `/voiceon` for audio) |
+| `/briefing` | Searches the web, gives news in your format + top 3 actions |
+| Nothing | Sends your briefing automatically at 07:30 Berlin time |
+| `/voiceoff` | Runs silently — text only |
+| `/reset` | Clears its short-term conversation memory |
+
+To change what Jarvis knows about you, edit `jarvis_context.py` —
+it's plain English, no code.
+
+## Notes & limits (v1)
+
+- The bot runs while your laptop is on and `python bot.py` is running.
+  If the laptop sleeps, Jarvis sleeps. (v3 moves it to a cheap server.)
+- Conversation memory resets when you restart the bot.
+- Anyone who finds your bot's username could message it — keep the
+  username obscure. (We can add an owner-only lock in v1.1.)
+
+## Troubleshooting
+
+- `pip` not found → reinstall Python with "Add to PATH" ticked.
+- "Missing keys" error → your `.env` file isn't named exactly `.env`
+  or a key wasn't pasted.
+- Voice note fails → check your Groq key.
