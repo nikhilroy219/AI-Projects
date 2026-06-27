@@ -97,8 +97,6 @@ A single HTML email delivered to your inbox each morning with one section per cl
 
 The brief is also written back to your CRM sheet for future reference.
 
-![Sheet Output](sheet_output.png)
-
 ## Author
 
 Nikhil Roy, Berlin-based operator with a background in project management, business development, and AI workflow automation.
