@@ -1,0 +1,690 @@
+{
+  "name": "AI Real-Time Fraud & Risk Mitigation Engine",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "transaction",
+        "options": {}
+      },
+      "id": "22a36f5e-c43a-44c4-9fb4-6375ab571377",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        9424,
+        3808
+      ],
+      "webhookId": "a0fdc0da-39cb-4a17-8a19-f3e0c3972fa8"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1a2b3c4-d5e6-7890-f1a2-b3c4d5e67890",
+              "name": "transaction_id",
+              "value": "={{ $json.body ? $json.body.transaction_id : $json.transaction_id }}",
+              "type": "string"
+            },
+            {
+              "id": "f2a3b4c5-d6e7-8901-f2a3-b4c5d6e78901",
+              "name": "timestamp",
+              "value": "={{ $json.body ? $json.body.timestamp : $json.timestamp }}",
+              "type": "string"
+            },
+            {
+              "id": "f3a4b5c6-d7e8-9012-f3a4-b5c6d7e89012",
+              "name": "customer_id",
+              "value": "={{ $json.body ? $json.body.customer_id : $json.customer_id }}",
+              "type": "string"
+            },
+            {
+              "id": "f4a5b6c7-d8e9-0123-f4a5-b6c7d8e90123",
+              "name": "customer_email",
+              "value": "={{ $json.body ? $json.body.customer_email : $json.customer_email }}",
+              "type": "string"
+            },
+            {
+              "id": "f5a6b7c8-d9e0-1234-f5a6-b7c8d9e01234",
+              "name": "amount_eur",
+              "value": "={{ $json.body ? $json.body.amount_eur : $json.amount_eur }}",
+              "type": "number"
+            },
+            {
+              "id": "f6a7b8c9-d0e1-2345-f6a7-b8c9d0e12345",
+              "name": "ip_address",
+              "value": "={{ $json.body ? $json.body.ip_address : $json.ip_address }}",
+              "type": "string"
+            },
+            {
+              "id": "f7a8b9c0-d1e2-3456-f7a8-b9c0d1e23456",
+              "name": "billing_country",
+              "value": "={{ $json.body ? $json.body.billing_country : $json.billing_country }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a2d93b01-5d53-4259-b0be-266b570e3968",
+      "name": "Set",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        9664,
+        3808
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://ip-api.com/json/{{ $('Set').item.json.ip_address }}?fields=country,countryCode,proxy,hosting",
+        "options": {}
+      },
+      "id": "9cbc341e-b0f8-4dd2-81f3-fff30254d62c",
+      "name": "HTTP Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        9920,
+        3600
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1sHRSPaNsZ3Tu2LkYGDv1GNSd_tXoeXSmzWIT1YHMVVQ",
+          "mode": "list",
+          "cachedResultName": "Sentinel - Transaction Risk Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sHRSPaNsZ3Tu2LkYGDv1GNSd_tXoeXSmzWIT1YHMVVQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 846513915,
+          "mode": "list",
+          "cachedResultName": "Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sHRSPaNsZ3Tu2LkYGDv1GNSd_tXoeXSmzWIT1YHMVVQ/edit#gid=846513915"
+        },
+        "filtersUI": {
+          "conditions": []
+        },
+        "options": {}
+      },
+      "id": "55503453-c1f6-4fa1-8168-3b8f01f5d382",
+      "name": "Velocity Check",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        9920,
+        3808
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9haJMDRsYnn5Q5Yz",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compute velocity: count transactions by this customer in the last 60 minutes\n// Runs on ALL items (including 0 items if sheet is empty) so Merge always receives 1 item\nconst items = $input.all();\nconst _wh2 = $('Webhook').item.json;\nconst _b2 = (_wh2.body && typeof _wh2.body === 'object') ? _wh2.body : _wh2;\nconst customer_id = $('Set').item.json.customer_id || _b2.customer_id;\nconst now = new Date();\nconst oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);\n\nlet velocity_count = 0;\n\nfor (const item of items) {\n  const rowCustomerId = item.json['Customer ID'] || '';\n  const rowTimestamp = item.json['Timestamp'] || '';\n\n  if (rowCustomerId === customer_id && rowTimestamp) {\n    const txnTime = new Date(rowTimestamp);\n    if (!isNaN(txnTime.getTime()) && txnTime >= oneHourAgo) {\n      velocity_count++;\n    }\n  }\n}\n\nreturn [{ json: { velocity_count } }];"
+      },
+      "id": "e113a677-44dd-4d91-8648-58c510a364ee",
+      "name": "Compute Velocity",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10176,
+        3808
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1sHRSPaNsZ3Tu2LkYGDv1GNSd_tXoeXSmzWIT1YHMVVQ",
+          "mode": "list",
+          "cachedResultName": "Sentinel - Transaction Risk Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sHRSPaNsZ3Tu2LkYGDv1GNSd_tXoeXSmzWIT1YHMVVQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 846513915,
+          "mode": "list",
+          "cachedResultName": "Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sHRSPaNsZ3Tu2LkYGDv1GNSd_tXoeXSmzWIT1YHMVVQ/edit#gid=846513915"
+        },
+        "filtersUI": {
+          "conditions": []
+        },
+        "options": {}
+      },
+      "id": "43c1f6fd-4c26-49a9-9b62-7cd1d9942e6e",
+      "name": "Amount Check",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        9920,
+        4000
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9haJMDRsYnn5Q5Yz",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Compute historical average amount for this customer\n// Runs on ALL items (including 0 items if sheet is empty) so Merge always receives 1 item\nconst items = $input.all();\nconst _wh3 = $('Webhook').item.json;\nconst _b3 = (_wh3.body && typeof _wh3.body === 'object') ? _wh3.body : _wh3;\nconst customer_id = $('Set').item.json.customer_id || _b3.customer_id;\n\nconst customerTransactions = items.filter(item => {\n  return (item.json['Customer ID'] || '') === customer_id;\n});\n\nlet historical_average = 200; // default if no history exists\n\nif (customerTransactions.length > 0) {\n  const total = customerTransactions.reduce((sum, item) => {\n    return sum + parseFloat(item.json['Amount (EUR)'] || 0);\n  }, 0);\n  historical_average = Math.round((total / customerTransactions.length) * 100) / 100;\n}\n\nreturn [{ json: { historical_average } }];"
+      },
+      "id": "4b68f320-a648-43e8-ae67-ed9aeddab97f",
+      "name": "Compute Amount",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10176,
+        4000
+      ]
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "75bdd125-802f-40de-a349-4d0b7a5977b3",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        10432,
+        3808
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// ============================================================\n// SENTINEL — Weighted Risk Scoring Algorithm\n// ============================================================\n\n// --- INPUT DATA ---\n// IP geo data from HTTP Request via Merge input\nconst ip_country = $input.item.json.countryCode || 'XX';\nconst is_proxy = $input.item.json.proxy || false;\nconst is_hosting = $input.item.json.hosting || false;\n\n// Transaction data — handle both flat and nested webhook body (n8n version differences)\nconst _wh = $('Webhook').item.json;\nconst _txn = (_wh.body && typeof _wh.body === 'object') ? _wh.body : _wh;\nconst billing_country = $('Set').item.json.billing_country || _txn.billing_country;\nconst amount_eur = parseFloat($('Set').item.json.amount_eur || _txn.amount_eur);\nconst timestamp = $('Set').item.json.timestamp || _txn.timestamp;\nconst customer_id = $('Set').item.json.customer_id || _txn.customer_id;\nconst transaction_id = $('Set').item.json.transaction_id || _txn.transaction_id;\nconst customer_email = $('Set').item.json.customer_email || _txn.customer_email || '';\nconst ip_address = $('Set').item.json.ip_address || _txn.ip_address;\n\n// Velocity and amount deviation from parallel Google Sheets branches\nconst velocity_count = parseInt($input.item.json.velocity_count || 0);\nconst historical_average = parseFloat($input.item.json.historical_average || 200);\n\n// --- PARAMETER 1: GEO MISMATCH (weight 0.30) ---\nlet risk_geo = 0;\nif (is_proxy || is_hosting) {\n  risk_geo = 90; // VPN or hosting provider — very high risk\n} else if (ip_country !== billing_country) {\n  risk_geo = 65; // Country mismatch — elevated risk\n} else {\n  risk_geo = 5; // Same country — low risk\n}\n\n// --- PARAMETER 2: VELOCITY (weight 0.25) ---\nlet risk_velocity = 0;\nif (velocity_count >= 5) {\n  risk_velocity = 95;\n} else if (velocity_count >= 3) {\n  risk_velocity = 65;\n} else if (velocity_count >= 1) {\n  risk_velocity = 30;\n} else {\n  risk_velocity = 5;\n}\n\n// --- PARAMETER 3: AMOUNT DEVIATION (weight 0.20) ---\nlet risk_amount = 0;\nconst deviation_ratio = historical_average > 0 ? amount_eur / historical_average : 10;\nif (deviation_ratio >= 5) {\n  risk_amount = 90; // 5x or more above average\n} else if (deviation_ratio >= 3) {\n  risk_amount = 70; // 3x above average\n} else if (deviation_ratio >= 2) {\n  risk_amount = 40; // 2x above average\n} else {\n  risk_amount = 10; // Normal range\n}\n\n// --- PARAMETER 4: TIME OF DAY (weight 0.15) ---\nlet risk_time = 0;\nconst txn_date = new Date(timestamp);\nconst hour_utc = txn_date.getUTCHours();\nif (hour_utc >= 2 && hour_utc <= 5) {\n  risk_time = 80; // 2am to 5am UTC — high risk window\n} else if (hour_utc >= 23 || hour_utc <= 1) {\n  risk_time = 40; // Late night — moderate risk\n} else {\n  risk_time = 5; // Business hours — low risk\n}\n\n// --- PARAMETER 5: EMAIL RISK (weight 0.10) ---\nlet risk_email = 0;\nconst disposable_domains = [\n  'tempmail.com', 'guerrillamail.com', 'mailinator.com',\n  'throwam.com', 'yopmail.com', 'trashmail.com', '10minutemail.com',\n  'sharklasers.com', 'guerrillamailblock.com', 'grr.la'\n];\nconst email_domain = customer_email.split('@')[1] || '';\nif (disposable_domains.includes(email_domain)) {\n  risk_email = 95;\n} else if (!email_domain.includes('.')) {\n  risk_email = 70;\n} else {\n  risk_email = 5;\n}\n\n// --- WEIGHTED FINAL SCORE ---\nconst final_score = Math.round(\n  (0.30 * risk_geo) +\n  (0.25 * risk_velocity) +\n  (0.20 * risk_amount) +\n  (0.15 * risk_time) +\n  (0.10 * risk_email)\n);\n\n// --- RISK LEVEL ---\nlet risk_level = '';\nlet action_taken = '';\nif (final_score >= 75) {\n  risk_level = 'HIGH';\n  action_taken = 'FROZEN';\n} else if (final_score >= 50) {\n  risk_level = 'MEDIUM';\n  action_taken = 'FLAGGED';\n} else {\n  risk_level = 'LOW';\n  action_taken = 'PASSED';\n}\n\n// --- OUTPUT ---\nreturn {\n  json: {\n    transaction_id,\n    timestamp,\n    customer_id,\n    customer_email,\n    amount_eur,\n    ip_address: ip_address,\n    ip_country,\n    billing_country,\n    is_proxy,\n    risk_geo,\n    risk_velocity,\n    risk_amount,\n    risk_time,\n    risk_email,\n    final_score,\n    risk_level,\n    action_taken,\n    historical_average,\n    velocity_count\n  }\n};"
+      },
+      "id": "5e99616b-001e-431d-bf4d-331da3840f5b",
+      "name": "SENTINEL — Scoring Algorithm",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        10672,
+        3808
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1sHRSPaNsZ3Tu2LkYGDv1GNSd_tXoeXSmzWIT1YHMVVQ",
+          "mode": "list",
+          "cachedResultName": "Sentinel - Transaction Risk Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sHRSPaNsZ3Tu2LkYGDv1GNSd_tXoeXSmzWIT1YHMVVQ/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 846513915,
+          "mode": "list",
+          "cachedResultName": "Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1sHRSPaNsZ3Tu2LkYGDv1GNSd_tXoeXSmzWIT1YHMVVQ/edit#gid=846513915"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Transaction ID": "={{ $json.transaction_id }}",
+            "Timestamp": "={{ $json.timestamp }}",
+            "Customer ID": "={{ $json.customer_id }}",
+            "Customer Email": "={{ $json.customer_email }}",
+            "Amount (EUR)": "={{ $json.amount_eur }}",
+            "IP Address": "={{ $json.ip_address }}",
+            "IP Country": "={{ $json.ip_country }}",
+            "Billing Country": "={{ $json.billing_country }}",
+            "Geo Mismatch Score": "={{ $json.risk_geo }}",
+            "Velocity Score": "={{ $json.risk_velocity }}",
+            "Amount Deviation Score": "={{ $json.risk_amount }}",
+            "Time of Day Score": "={{ $json.risk_time }}",
+            "Final Risk Score": "={{ $json.final_score }}",
+            "Risk Level": "={{ $json.risk_level }}",
+            "Action Taken": "={{ $json.action_taken }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Transaction ID",
+              "displayName": "Transaction ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer ID",
+              "displayName": "Customer ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Email",
+              "displayName": "Customer Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Amount (EUR)",
+              "displayName": "Amount (EUR)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "IP Address",
+              "displayName": "IP Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "IP Country",
+              "displayName": "IP Country",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Billing Country",
+              "displayName": "Billing Country",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Geo Mismatch Score",
+              "displayName": "Geo Mismatch Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Velocity Score",
+              "displayName": "Velocity Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Amount Deviation Score",
+              "displayName": "Amount Deviation Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Time of Day Score",
+              "displayName": "Time of Day Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Final Risk Score",
+              "displayName": "Final Risk Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Risk Level",
+              "displayName": "Risk Level",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action Taken",
+              "displayName": "Action Taken",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "5d330e9c-55ff-4a7b-83ef-5521eff32165",
+      "name": "Log to Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        10928,
+        3808
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9haJMDRsYnn5Q5Yz",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "condition-high-risk",
+              "leftValue": "={{ $json.final_score }}",
+              "rightValue": 75,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0f60dbcf-b424-4077-80bf-99612b5760a2",
+      "name": "Score Routing",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        11184,
+        3808
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "nikhilroy219@gmail.com",
+        "subject": "=🚨 TRANSACTION FROZEN — Score: {{ $json.final_score }}/100 — {{ $json.transaction_id }}",
+        "message": "=<h2 style=\"color: #cc0000;\">TRANSACTION FROZEN — IMMEDIATE ACTION REQUIRED</h2>\n\n<table style=\"border-collapse: collapse; width: 100%;\">\n  <tr><td><strong>Transaction ID</strong></td><td>{{ $json.transaction_id }}</td></tr>\n  <tr><td><strong>Customer ID</strong></td><td>{{ $json.customer_id }}</td></tr>\n  <tr><td><strong>Customer Email</strong></td><td>{{ $json.customer_email }}</td></tr>\n  <tr><td><strong>Amount</strong></td><td>EUR {{ $json.amount_eur }}</td></tr>\n  <tr><td><strong>Timestamp</strong></td><td>{{ $json.timestamp }}</td></tr>\n  <tr><td><strong>IP Country</strong></td><td>{{ $json.ip_country }}</td></tr>\n  <tr><td><strong>Billing Country</strong></td><td>{{ $json.billing_country }}</td></tr>\n  <tr><td><strong>VPN / Proxy Detected</strong></td><td>{{ $json.is_proxy }}</td></tr>\n</table>\n\n<h3>Risk Score Breakdown</h3>\n<table style=\"border-collapse: collapse; width: 100%;\">\n  <tr><th>Parameter</th><th>Score</th><th>Weight</th><th>Contribution</th></tr>\n  <tr><td>Geo Mismatch</td><td>{{ $json.risk_geo }}</td><td>30%</td><td>{{ Math.round($json.risk_geo * 0.30) }}</td></tr>\n  <tr><td>Transaction Velocity</td><td>{{ $json.risk_velocity }}</td><td>25%</td><td>{{ Math.round($json.risk_velocity * 0.25) }}</td></tr>\n  <tr><td>Amount Deviation</td><td>{{ $json.risk_amount }}</td><td>20%</td><td>{{ Math.round($json.risk_amount * 0.20) }}</td></tr>\n  <tr><td>Time of Day</td><td>{{ $json.risk_time }}</td><td>15%</td><td>{{ Math.round($json.risk_time * 0.15) }}</td></tr>\n  <tr><td>Email Risk</td><td>{{ $json.risk_email }}</td><td>10%</td><td>{{ Math.round($json.risk_email * 0.10) }}</td></tr>\n  <tr><td><strong>FINAL SCORE</strong></td><td><strong>{{ $json.final_score }}</strong></td><td>100%</td><td><strong>{{ $json.final_score }}</strong></td></tr>\n</table>\n\n<h3 style=\"color: #cc0000;\">Action: TRANSACTION FROZEN</h3>\n<p>This transaction has been automatically frozen pending review. Please investigate and take action.</p>",
+        "options": {}
+      },
+      "id": "fdff2da8-aaa9-4e6d-875d-97f9b85b8bb4",
+      "name": "Gmail — FREEZE Alert",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        11424,
+        3648
+      ],
+      "webhookId": "089446c2-fff8-4da1-acea-c31e8861096b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "5YD6pEkuzGFlyeIK",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "condition-medium-risk",
+              "leftValue": "={{ $json['Final Risk Score'] }}",
+              "rightValue": 50,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5f3ca0c1-9827-4658-9c53-1083e08ca226",
+      "name": "Score Routing — Medium",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        11424,
+        3920
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "nikhilroy219@gmail.com",
+        "subject": "=⚠️ TRANSACTION FLAGGED — Score: {{ $json.final_score }}/100 — {{ $json.transaction_id }}",
+        "message": "=<h2 style=\"color: #e6a817;\">TRANSACTION FLAGGED FOR REVIEW</h2>\n<p><strong>Transaction:</strong> {{ $json.transaction_id }}</p>\n<p><strong>Customer:</strong> {{ $json.customer_id }} — {{ $json.customer_email }}</p>\n<p><strong>Amount:</strong> EUR {{ $json.amount_eur }}</p>\n<p><strong>Risk Score:</strong> {{ $json.final_score }}/100 — MEDIUM RISK</p>\n<p><strong>Action:</strong> Transaction passed but flagged for manual review.</p>\n<p>Check the transaction log for full score breakdown.</p>",
+        "options": {}
+      },
+      "id": "38167011-a0c6-4525-a6da-d7bff66082ac",
+      "name": "Gmail — FLAG Alert",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        11680,
+        3856
+      ],
+      "webhookId": "04efc8be-00d2-4835-a3d7-8690485f00d3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "5YD6pEkuzGFlyeIK",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Set",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Velocity Check",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Amount Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Velocity Check": {
+      "main": [
+        [
+          {
+            "node": "Compute Velocity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Velocity": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Amount Check": {
+      "main": [
+        [
+          {
+            "node": "Compute Amount",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "SENTINEL — Scoring Algorithm",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SENTINEL — Scoring Algorithm": {
+      "main": [
+        [
+          {
+            "node": "Log to Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Score Routing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Routing": {
+      "main": [
+        [
+          {
+            "node": "Gmail — FREEZE Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Score Routing — Medium",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Routing — Medium": {
+      "main": [
+        [
+          {
+            "node": "Gmail — FLAG Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compute Amount": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "fdf8375d-60b6-41dd-869a-7abb6a272f87",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e75532bac761378698f9eb62d1bcbf27639bb771c0c3d727042f13ecceb17471"
+  },
+  "id": "B7L2vtOaImrS68yy",
+  "tags": []
+}
