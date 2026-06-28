@@ -19,17 +19,19 @@ Every time it runs, it:
 
 ## Workflow Architecture
 
+```
 Schedule Trigger
 └── Get rows from Sheet (company list)
-        └── Loop Over Items (one company at a time)
-                ├── [loop] HTTP Request → Perplexity AI (fetch news)
-                │           └── HTTP Request → Anthropic Claude (qualify signal)
-                │                       └── If (signal or no signal?)
-                │                               ├── [true]  Update row in Sheet
-                │                               └── [false] Skip, continue loop
-                └── [done] Get rows from Sheet (execute once)
-                            └── Aggregate (collapse all rows into one item)
-                                    └── Send email via Gmail (one digest)
+    └── Loop Over Items (one company at a time)
+        ├── [loop] HTTP Request - Perplexity AI (fetch news)
+        │   └── HTTP Request - Anthropic Claude (qualify signal)
+        │       └── If (signal or no signal?)
+        │           ├── [true]  Update row in Sheet
+        │           └── [false] Skip, continue loop
+        └── [done] Get rows from Sheet (execute once)
+            └── Aggregate (collapse all rows into one item)
+                └── Send email via Gmail (one digest)
+```
 
 Key design decisions:
 
@@ -37,6 +39,18 @@ Key design decisions:
 - Claude returns either a one-sentence opportunity or exactly NO_SIGNAL, easy to filter
 - Get rows node set to Execute Once to prevent the email firing multiple times per loop
 - Aggregate node collapses all rows before Gmail so only one email is sent per run
+
+## Claude Prompt
+
+```
+You are a B2B sales analyst. Based on this news about [Perplexity output], is this a meaningful sales signal for a B2B software company? If YES, respond with only one clear sentence explaining the opportunity, starting with the company name. If NO, respond with exactly: NO_SIGNAL
+```
+
+## Output
+
+![Email Digest](email_output.png)
+
+After each run, a single email digest is delivered to your inbox listing every actionable signal found that day, one sentence per company. Companies with no signal are skipped. The Google Sheet is updated in parallel with the same results for reference.
 
 ## Stack
 
@@ -59,11 +73,11 @@ Key design decisions:
 
 ### Installation
 
-1. Clone this repo
-2. Import Sales Signal Monitor.json into your n8n instance via Workflows → Import
+1. Download `Sales Signal Monitor.json`
+2. Import into your n8n instance via Workflows → Import
 3. Configure credentials in n8n:
-   - Perplexity: HTTP Header Auth (Authorization: Bearer YOUR_KEY)
-   - Anthropic: HTTP Header Auth (x-api-key: YOUR_KEY, anthropic-version: 2023-06-01)
+   - Perplexity: HTTP Header Auth (`Authorization: Bearer YOUR_KEY`)
+   - Anthropic: HTTP Header Auth (`x-api-key: YOUR_KEY`, `anthropic-version: 2023-06-01`)
    - Google Sheets: OAuth2
    - Gmail: OAuth2
 4. Create a Google Sheet with columns: Company Name, Status, AOS, Link, News & Leverage, Last Updated
@@ -71,25 +85,6 @@ Key design decisions:
 6. Set the Schedule Trigger to your preferred cadence
 7. Activate the workflow
 
-## Claude Prompt
+---
 
-You are a B2B sales analyst. Based on this news about [Perplexity output], is this a meaningful sales signal for a B2B software company? If YES, respond with only one clear sentence explaining the opportunity, starting with the company name. If NO, respond with exactly: NO_SIGNAL
-
-## Target Company List
-
-| Company | Sector |
-|---|---|
-| 1KOMMA5° | Residential energy management |
-| Envelio | Grid digitalisation for DSOs |
-| gridX | Energy management for utilities and EVs |
-| Twaice | Battery analytics and predictive maintenance |
-| Fyld | AI field operations for utilities |
-| Kauz | Conversational AI for B2B |
-| Ampere.energy | AI-driven energy trading and forecasting |
-| Nodes & Links | AI project intelligence for infrastructure |
-
-## Author
-
-Nikhil Roy, Berlin-based operator with a background in project management, business development, and tech and AI workflow automation.
-
-Portfolio: https://nikhilroy.lovable.app
+Built by [Nikhil Roy](https://nikhilroy.lovable.app), Berlin
