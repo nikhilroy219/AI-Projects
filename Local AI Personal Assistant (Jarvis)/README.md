@@ -1,10 +1,10 @@
-# Jarvis — Local AI Personal Assistant
+# Jarvis - Local AI Personal Assistant
 
 A self-hosted personal AI assistant you talk to over Telegram, powered by Claude (Anthropic). Reachable by text or voice from anywhere, it answers with real-time web search, remembers context across sessions, switches between models on demand, and delivers a scheduled daily briefing, all running locally on your own machine with no manual input required.
 
 ## What It Does
 
-A chat app gives you an AI you have to open and ask. This project gives you one that runs on its own machine, reaches you on your phone, and acts on its own schedule, the difference between a tool you operate and an assistant that works in the background.
+A chat app gives you an AI you have to open and ask. This project gives you one that runs on its own machine, reaches you on your phone, and acts on its own schedule. The difference between a tool you operate and an assistant that works in the background.
 
 What makes it more than a chat window:
 
@@ -17,9 +17,11 @@ What makes it more than a chat window:
 
 ## Architecture
 
+```
 bot.py             Telegram interface + orchestration (handlers, scheduler, voice I/O)
 jarvis_context.py  Assistant personality and system prompt
 jarvis_memory.py   Persistent memory (load / save / inspect, stored as JSON)
+```
 
 Key design decisions:
 
@@ -67,28 +69,30 @@ Plain text or a voice note works any time for normal conversation.
 
 1. Clone this repo
 2. Create a Telegram bot via @BotFather and copy the token
-3. Copy .env.example to .env and fill in your keys:
+3. Copy `.env.example` to `.env` and fill in your keys:
 
+```
 TELEGRAM_BOT_TOKEN=
 ANTHROPIC_API_KEY=
 GROQ_API_KEY=
 OWNER_CHAT_ID=
+```
 
 4. Install dependencies and run:
 
+```
 pip install -r requirements.txt
 python bot.py
+```
 
-5. Send /start to your bot. It replies with your chat ID. Put that in .env as OWNER_CHAT_ID to enable the owner-lock and scheduled briefing, then restart.
+5. Send `/start` to your bot. It replies with your chat ID. Put that in `.env` as `OWNER_CHAT_ID` to enable the owner-lock and scheduled briefing, then restart.
 
 ## Notes
 
 - Runs while the host machine is on and the script is running
-- API keys live only in your local .env and are never committed
+- API keys live only in your local `.env` and are never committed
 - Built as a personal project to explore always-on, self-hosted AI assistants
 
-## Author
+---
 
-Nikhil Roy, Berlin-based operator with a background in project management, business development, and tech and AI workflow automation.
-
-Portfolio: https://nikhilroy.lovable.app
+Built by [Nikhil Roy](https://nikhilroy.lovable.app), Berlin
