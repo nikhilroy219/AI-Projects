@@ -1,33 +1,24 @@
 # AI Real-Time Fraud & Risk Mitigation Engine
 
-An event-driven transaction fraud scoring engine built in n8n. Most fraud detection runs on a schedule — this fires the moment a payment transaction occurs. Every transaction is enriched with live geolocation and historical spend data, scored against a weighted risk algorithm, logged, and routed to the appropriate action within seconds. No manual review unless the score demands it.
-
-Built to demonstrate how a fintech payment ops team can catch fraudulent transactions in real time without expensive commercial APIs or black-box ML models.
-
-## Architecture
-Webhook (POST /transaction)
-
-└── Set — extract transaction fields
-
-├── [PARALLEL] HTTP Request — ip-api.com geolocation
-
-├── [PARALLEL] Velocity Check (Google Sheets) → Compute Velocity
-
-└── [PARALLEL] Amount Check (Google Sheets) → Compute Amount
-
-└── Merge (all 3 branches)
-
-└── SENTINEL — Scoring Algorithm (Code node)
-
-└── Log to Google Sheet
-
-├── Score < 50   → PASS (no alert)
-
-├── Score 50-74  → FLAG (low priority Gmail alert)
-
-└── Score >= 75  → FREEZE (urgent Gmail alert + full breakdown)
+An event-driven transaction fraud scoring engine built in n8n. Most fraud detection runs on a schedule - this fires the moment a payment transaction occurs. Every transaction is enriched with live geolocation and historical spend data, scored against a weighted risk algorithm, logged, and routed to the appropriate action within seconds. No manual review unless the score demands it.
 
 ![Workflow Canvas](workflow_canvas.png)
+
+## Architecture
+
+```
+Webhook (POST /transaction)
+└── Set - extract transaction fields
+    ├── [PARALLEL] HTTP Request - ip-api.com geolocation
+    ├── [PARALLEL] Velocity Check (Google Sheets) - Compute Velocity
+    └── [PARALLEL] Amount Check (Google Sheets) - Compute Amount
+└── Merge (all 3 branches)
+    └── SENTINEL - Scoring Algorithm (Code node)
+        └── Log to Google Sheet
+            ├── Score < 50   - PASS (no alert)
+            ├── Score 50-74  - FLAG (low priority Gmail alert)
+            └── Score >= 75  - FREEZE (urgent Gmail alert + full breakdown)
+```
 
 ## Scoring Algorithm
 
@@ -49,21 +40,25 @@ The SENTINEL code node computes a weighted risk score between 0 and 100.
 | 50-74 | MEDIUM | Transaction passes, low priority Gmail alert sent |
 | 75-100 | HIGH | Transaction frozen, urgent Gmail alert with full score breakdown |
 
+## Output
+
+![Alert Email](email_output.png)
+
+Every transaction is logged to the Google Sheet regardless of score. For MEDIUM risk, a low priority Gmail alert is sent with the score and key flags. For HIGH risk, an urgent alert fires with the full score breakdown by parameter so the ops team can act immediately.
+
 ## Enrichment Sources
 
-ip-api.com — Free geolocation API, no key required
-Endpoint: http://ip-api.com/json/{ip_address}?fields=country,countryCode,proxy,hosting
+**ip-api.com** - Free geolocation API, no key required
+Endpoint: `http://ip-api.com/json/{ip_address}?fields=country,countryCode,proxy,hosting`
 Returns: country, country code, VPN/proxy flag, hosting provider flag. Rate limit: 45 req/min.
 
-Google Sheets (Sentinel — Transaction Risk Log) — Used for two parallel lookups:
+**Google Sheets (Sentinel - Transaction Risk Log)** - Used for two parallel lookups:
 - Velocity check: counts this customer's transactions in the last 60 minutes
 - Amount deviation: calculates this customer's historical average transaction amount (default EUR 200 if no history)
 
 ## Webhook
 
-Method: POST
-Test URL: http://localhost:5678/webhook-test/transaction
-Production URL: http://localhost:5678/webhook/transaction
+Method: POST. Send requests to your n8n instance webhook URL. In test mode use the test URL shown in the Webhook node; in production use the production URL after publishing the workflow.
 
 ### Expected Payload
 
@@ -82,7 +77,7 @@ Production URL: http://localhost:5678/webhook/transaction
 
 ## Test Scenarios
 
-### Test 1 — LOW RISK (expected: PASS, no email)
+### Test 1 - LOW RISK (expected: PASS, no email)
 ```json
 {
   "transaction_id": "TXN-TEST-001",
@@ -96,7 +91,7 @@ Production URL: http://localhost:5678/webhook/transaction
 }
 ```
 
-### Test 2 — MEDIUM RISK (expected: FLAG, low priority email)
+### Test 2 - MEDIUM RISK (expected: FLAG, low priority email)
 ```json
 {
   "transaction_id": "TXN-TEST-002",
@@ -110,7 +105,7 @@ Production URL: http://localhost:5678/webhook/transaction
 }
 ```
 
-### Test 3 — HIGH RISK (expected: FREEZE, urgent email with breakdown)
+### Test 3 - HIGH RISK (expected: FREEZE, urgent email with breakdown)
 ```json
 {
   "transaction_id": "TXN-TEST-003",
@@ -124,14 +119,14 @@ Production URL: http://localhost:5678/webhook/transaction
 }
 ```
 
-Send via Hoppscotch (https://hoppscotch.io) or Postman as a POST request with Content-Type: application/json.
+Send via [Hoppscotch](https://hoppscotch.io) or Postman as a POST request with `Content-Type: application/json`.
 
 ## Google Sheet
 
-File: Sentinel — Transaction Risk Log
-File ID: 1sHRSPaNsZ3Tu2LkYGDv1GNSd_tXoeXSmzWIT1YHMVVQ
+File: `Sentinel - Transaction Risk Log`
 
 Column headers required in Row 1:
+
 Transaction ID | Timestamp | Customer ID | Customer Email | Amount (EUR) | IP Address | IP Country | Billing Country | Geo Mismatch Score | Velocity Score | Amount Deviation Score | Time of Day Score | Final Risk Score | Risk Level | Action Taken
 
 ## Credentials Required
@@ -141,29 +136,25 @@ Transaction ID | Timestamp | Customer ID | Customer Email | Amount (EUR) | IP Ad
 | Velocity Check, Amount Check, Log to Google Sheet | Google Sheets OAuth2 |
 | Gmail FREEZE Alert, Gmail FLAG Alert | Gmail OAuth2 |
 
-Both should already be configured in your n8n instance from previous projects.
-
 ## How to Run
 
-Test mode (no publish needed):
+**Test mode:**
 1. Open the workflow in n8n
 2. Click Listen for test event on the Webhook node
-3. Send a POST request to http://localhost:5678/webhook-test/transaction
+3. Send a POST request to your n8n test webhook URL
 4. Watch execution live in the editor
 
-Production mode:
+**Production mode:**
 1. Click Publish (top right)
-2. Send POST requests to http://localhost:5678/webhook/transaction
+2. Send POST requests to your n8n production webhook URL
 3. Workflow fires automatically on every transaction
 
 ## Notes
 
-- Velocity and Amount Check nodes read all rows and filter in the Compute nodes — handles empty sheets gracefully
-- After the Log node, field names map to column headers — Score Routing and Gmail nodes reference column header names
+- Velocity and Amount Check nodes read all rows and filter in the Compute nodes, handles empty sheets gracefully
+- After the Log node, field names map to column headers; Score Routing and Gmail nodes reference column header names
 - ip-api.com free tier: 45 requests per minute. For higher volume consider a paid plan or caching layer
 
-## Author
+---
 
-Nikhil Roy, Berlin-based operator with a background in project management, business development, and AI workflow automation.
-
-Portfolio: https://nikhilroy.lovable.app
+Built by [Nikhil Roy](https://nikhilroy.lovable.app), Berlin
