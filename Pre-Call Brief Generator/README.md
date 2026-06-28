@@ -11,7 +11,7 @@ Most salespeople walk into calls having done zero research, or having spent 20 m
 Every morning at 8am it:
 
 1. Pulls today's meetings from Google Calendar
-2. Filters for sales and client meetings using Claude — personal events are automatically skipped
+2. Filters for sales and client meetings using Claude (personal events are automatically skipped)
 3. Extracts the company name from the meeting title using Claude
 4. Looks up the company in your Google Sheets CRM
 5. Researches the company and contact via Perplexity (last 30 days of news and background)
@@ -21,20 +21,22 @@ Every morning at 8am it:
 
 ## Workflow Architecture
 
+```
 Schedule Trigger (8am daily)
-    └── Google Calendar (fetch today's events)
-            └── Loop Over Items (one meeting at a time)
-                    └── Claude (is this a client or sales meeting? YES or NO)
-                            ├── [NO]  Skip, back to loop
-                            └── [YES] Claude (extract company name from title)
-                                    └── Google Sheets (look up company in CRM)
-                                            └── Perplexity (research company and contact)
-                                                    └── Claude (generate structured brief)
-                                                            └── Google Sheets (write brief to CRM)
-                                                                    └── Back to loop
-    └── [done] Get rows from Sheet (execute once)
-                └── Aggregate
-                        └── Gmail (one email with all briefs)
+└── Google Calendar (fetch today's events)
+    └── Loop Over Items (one meeting at a time)
+        └── Claude (is this a client or sales meeting?)
+            ├── [NO]  Skip → back to loop
+            └── [YES] Claude (extract company name from title)
+                └── Google Sheets (look up company in CRM)
+                    └── Perplexity (research company and contact)
+                        └── Claude (generate structured brief)
+                            └── Google Sheets (write brief to CRM)
+                                └── back to loop
+└── [done] Get rows from Sheet (execute once)
+    └── Aggregate
+        └── Gmail (one email with all briefs)
+```
 
 Key design decisions:
 
@@ -65,21 +67,23 @@ Key design decisions:
 
 ### Installation
 
-1. Download Pre-Call Brief Generator.json
+1. Download `Pre-Call Brief Generator.json`
 2. In n8n: Workflows → Import from file
 3. Connect your credentials in each node (Calendar, Sheets, Gmail nodes will prompt you)
-4. Add your Anthropic and Perplexity API keys to the HTTP Request nodes (x-api-key header for Anthropic, Authorization: Bearer for Perplexity)
+4. Add your Anthropic and Perplexity API keys to the HTTP Request nodes (`x-api-key` header for Anthropic, `Authorization: Bearer` for Perplexity)
 
 ### Google Sheet Format
 
 Your Master Sheet needs at minimum these columns:
 
-- Company Name — used for matching against Claude's extracted company name
-- Contact Name
-- Contact Title
-- Deal Stage
-- Notes
-- Brief — written by the workflow after each run
+| Column | Purpose |
+|---|---|
+| Company Name | Used for matching against Claude's extracted company name |
+| Contact Name | Included in the research prompt |
+| Contact Title | Included in the research prompt |
+| Deal Stage | Context for brief generation |
+| Notes | Any existing context passed to Claude |
+| Brief | Written by the workflow after each run |
 
 ### Schedule
 
@@ -87,18 +91,16 @@ Triggers daily at 8:00 AM via cron. Adjust in the Schedule Trigger node if neede
 
 ## How Company Matching Works
 
-Claude reads the meeting title (e.g. "Product Demo — Nexora Labs") and returns the company name in a structured format. That name is then used to filter your CRM sheet. If Claude cannot extract a name, it falls back to the raw meeting title.
+Claude reads the meeting title (e.g. `"Product Demo: Nexora Labs"`) and returns the company name in a structured format. That name is then used to filter your CRM sheet. If Claude cannot extract a name, it falls back to the raw meeting title.
 
 ## Output
 
-A single HTML email delivered to your inbox each morning with one section per client meeting — company name, contact, and the full brief in plain prose.
+A single HTML email delivered to your inbox each morning with one section per client meeting: company name, contact, and the full brief in plain prose.
 
 ![Email Output](email_output.png)
 
 The brief is also written back to your CRM sheet for future reference.
 
-## Author
+---
 
-Nikhil Roy, Berlin-based operator with a background in project management, business development, and AI workflow automation.
-
-Portfolio: https://nikhilroy.lovable.app
+Built by [Nikhil Roy](https://nikhilroy.lovable.app), Berlin
