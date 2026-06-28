@@ -1,0 +1,625 @@
+{
+  "name": "Pre-Call Brief Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "id": "1c95813f-6180-47da-a90f-c63801b48bf5",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -3904,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "nikhilroy219@gmail.com",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "timeMin": "={{ new Date(new Date().setHours(0,0,0,0)).toISOString() }}",
+        "timeMax": "={{ new Date(new Date().setHours(23,59,59,999)).toISOString() }}",
+        "options": {}
+      },
+      "id": "e4acaf9d-a2f2-4b0d-9a39-be5b50bce0da",
+      "name": "Get Today's Meetings",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -3664,
+        192
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "bZ1s2fvQ04q5Q2yk",
+          "name": "Google Calendar account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "f7d549cc-2f83-4d04-a909-c48f979afeb9",
+      "name": "Loop Over Meetings",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -3424,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "YOUR_ANTHROPIC_API_KEY"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({model: 'claude-sonnet-4-6', max_tokens: 100, messages: [{role: 'user', content: 'Is this a client or sales meeting? If YES, reply with exactly: YES|CompanyName where CompanyName is extracted from the meeting title or attendee email domains. If NO, reply with exactly: NO. No other text or explanation. Meeting title: ' + $json.summary + '. Attendees: ' + ($json.attendees ? $json.attendees.map(function(a){return a.email||a.displayName||''}).join(', ') : 'none')}]}) }}",
+        "options": {}
+      },
+      "id": "9ca7bff0-203c-4306-9842-72d4b73858ce",
+      "name": "Claude - Meeting Filter",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3184,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-yes",
+              "leftValue": "={{ $json.content[0].text.trim().substring(0, 3) }}",
+              "rightValue": "YES",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "14186e4c-6899-48c2-9ac6-cd53cdec064e",
+      "name": "Is Sales Meeting?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -2944,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0",
+          "mode": "list",
+          "cachedResultName": "Sales - Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1759158682,
+          "mode": "list",
+          "cachedResultName": "Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0/edit#gid=1759158682"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Company Name",
+              "lookupValue": "={{ $('Claude - Meeting Filter').item.json.content[0].text.trim().includes('|') ? $('Claude - Meeting Filter').item.json.content[0].text.trim().split('|')[1].trim() : $('Loop Over Meetings').item.json.summary }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b94a26cc-90d6-409a-85fe-e0a4d3236222",
+      "name": "Get Pipeline Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -2704,
+        -176
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9haJMDRsYnn5Q5Yz",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer YOUR_PERPLEXITY_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({model: 'sonar', messages: [{role: 'user', content: 'Find the latest news and developments about ' + $json['Company Name'] + ' in the last 30 days. Also find background information about ' + $json['Contact Name'] + ', their role and any recent activity. Be specific and factual.'}]}) }}",
+        "options": {}
+      },
+      "id": "519901af-67db-487b-b7a5-833536cc328e",
+      "name": "Perplexity - Company Research",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2480,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "YOUR_ANTHROPIC_API_KEY"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({model: 'claude-sonnet-4-6', max_tokens: 600, messages: [{role: 'user', content: 'You are a sales intelligence assistant. Generate a concise pre-call brief for a sales meeting. Use the following information:\\n\\nCompany: ' + $('Get Pipeline Row').item.json['Company Name'] + '\\nContact: ' + $('Get Pipeline Row').item.json['Contact Name'] + ', ' + $('Get Pipeline Row').item.json['Contact Title'] + '\\nDeal Stage: ' + $('Get Pipeline Row').item.json['Deal Stage'] + '\\nNotes from previous interactions: ' + $('Get Pipeline Row').item.json['Notes'] + '\\nResearch: ' + $json.choices[0].message.content.replace(/\\n/g, ' ').replace(/\"/g, \"\\'\") + '\\n\\nStructure the brief as follows:\\n1. Company Snapshot (2-3 sentences)\\n2. Recent News & Signals (2-3 bullet points)\\n3. About the Contact (2-3 sentences)\\n4. Recommended Angle for this call, tailored to the deal stage\\n5. Two suggested talking points\\n6. One likely objection and how to handle it\\n\\nKeep it sharp and actionable. This person has 2 minutes to read it before the call. Do not use markdown formatting — no **, ##, *, or any other markdown syntax. Write in plain prose only.'}]}) }}",
+        "options": {}
+      },
+      "id": "84403537-03e5-4aa8-9bc4-f24b03c1001d",
+      "name": "Claude - Generate Brief",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2240,
+        -176
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0",
+          "mode": "list",
+          "cachedResultName": "Sales - Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1759158682,
+          "mode": "list",
+          "cachedResultName": "Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0/edit#gid=1759158682"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Company Name": "={{ $('Get Pipeline Row').item.json['Company Name'] }}",
+            "Brief": "={{ $json.content[0].text }}"
+          },
+          "matchingColumns": ["Company Name"],
+          "schema": [
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AOS",
+              "displayName": "AOS",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Link",
+              "displayName": "Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Contact Name",
+              "displayName": "Contact Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Contact Title",
+              "displayName": "Contact Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Deal Stage",
+              "displayName": "Deal Stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "News & Leverage",
+              "displayName": "News & Leverage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Updated",
+              "displayName": "Last Updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Brief",
+              "displayName": "Brief",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "4c97e5bd-e35a-4126-935a-2d17970ca7be",
+      "name": "Update Pipeline with Brief",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -2000,
+        -176
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9haJMDRsYnn5Q5Yz",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0",
+          "mode": "list",
+          "cachedResultName": "Sales - Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1759158682,
+          "mode": "list",
+          "cachedResultName": "Master Sheet",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1hHqrzRnkw6iBTrNWbSla8SmAcNy8d2Tgz6hdpVIACj0/edit#gid=1759158682"
+        },
+        "options": {}
+      },
+      "id": "8b891f53-502d-4fe6-8510-43e238f07bbf",
+      "name": "Get All Updated Rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -3088,
+        304
+      ],
+      "executeOnce": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "9haJMDRsYnn5Q5Yz",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "data",
+        "options": {}
+      },
+      "id": "749a7093-6ef6-42ee-8c78-b45e429d0e80",
+      "name": "Aggregate All Briefs",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -2848,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "nikhilroy219@gmail.com",
+        "subject": "=Daily Pre-Call Briefs — {{ new Date().toLocaleDateString('en-GB') }}",
+        "message": "=<h2>Pre-Call Briefs — {{ new Date().toLocaleDateString('en-GB') }}</h2>{{ $json.data.filter(item => item['Brief']).map(item => '<hr><h3>' + (item['Company Name'] || '') + ' — ' + (item['Contact Name'] || '') + '</h3><p>' + item['Brief'].replace(/\\n/g, '<br>') + '</p>').join('') }}",
+        "options": {
+          "emailType": "html"
+        }
+      },
+      "id": "11eedcf4-fb4e-4aa9-8946-c8e91e1afbb5",
+      "name": "Gmail - Send Pre-Call Briefs",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -2624,
+        304
+      ],
+      "webhookId": "c82a1c9d-83c1-45ad-a64b-9a8fb60b0155",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "5YD6pEkuzGFlyeIK",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Today's Meetings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Today's Meetings": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Meetings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Meetings": {
+      "main": [
+        [
+          {
+            "node": "Get All Updated Rows",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Claude - Meeting Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude - Meeting Filter": {
+      "main": [
+        [
+          {
+            "node": "Is Sales Meeting?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Sales Meeting?": {
+      "main": [
+        [
+          {
+            "node": "Get Pipeline Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Meetings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pipeline Row": {
+      "main": [
+        [
+          {
+            "node": "Perplexity - Company Research",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perplexity - Company Research": {
+      "main": [
+        [
+          {
+            "node": "Claude - Generate Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude - Generate Brief": {
+      "main": [
+        [
+          {
+            "node": "Update Pipeline with Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Pipeline with Brief": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Meetings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get All Updated Rows": {
+      "main": [
+        [
+          {
+            "node": "Aggregate All Briefs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate All Briefs": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Send Pre-Call Briefs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "3cb9f965-e810-48f9-986c-974336e16d62",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e75532bac761378698f9eb62d1bcbf27639bb771c0c3d727042f13ecceb17471"
+  },
+  "id": "SjYogpbGTmT5LYkU",
+  "tags": []
+}
