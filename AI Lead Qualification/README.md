@@ -1,12 +1,12 @@
 # AI Lead Qualification
 
-This project started as a manual ChatGPT workflow -- a structured prompt with an embedded qualification ruleset that the sales team used to process prospect lists in batches. Once the logic was validated and adopted, I rebuilt it as a fully automated n8n pipeline: the same ruleset, now running on a schedule, processing companies autonomously, and writing results directly to a CRM sheet without any manual intervention.
+This project started as a manual ChatGPT workflow - a structured prompt with an embedded qualification ruleset that the sales team used to process prospect lists in batches. Once the logic was validated and adopted, I rebuilt it as a fully automated n8n pipeline: the same ruleset, now running on a schedule, processing companies autonomously, and writing results directly to a CRM sheet without any manual intervention.
 
 ![Workflow Canvas](workflow_canvas.png)
 
 ## What It Does
 
-Sales teams waste hours manually researching and qualifying prospect lists. This workflow automates the entire process -- from raw company names to fully populated sales rows with AOS, website, and call-ready news leverage.
+Sales teams waste hours manually researching and qualifying prospect lists. This workflow automates the entire process - from raw company names to fully populated sales rows with AOS, website, and call-ready news leverage.
 
 Every Friday at 4pm it:
 
