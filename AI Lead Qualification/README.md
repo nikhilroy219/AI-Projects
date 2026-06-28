@@ -1,12 +1,12 @@
 # AI Lead Qualification
 
-This project started as a manual ChatGPT workflow — a structured prompt with an embedded qualification ruleset that the sales team used to process prospect lists in batches. Once the logic was validated and adopted, I rebuilt it as a fully automated n8n pipeline: the same ruleset, now running on a schedule, processing companies autonomously, and writing results directly to a CRM sheet without any manual intervention.
+This project started as a manual ChatGPT workflow -- a structured prompt with an embedded qualification ruleset that the sales team used to process prospect lists in batches. Once the logic was validated and adopted, I rebuilt it as a fully automated n8n pipeline: the same ruleset, now running on a schedule, processing companies autonomously, and writing results directly to a CRM sheet without any manual intervention.
 
 ![Workflow Canvas](workflow_canvas.png)
 
 ## What It Does
 
-Sales teams waste hours manually researching and qualifying prospect lists. This workflow automates the entire process — from raw company name to a fully populated sales row with AOS, website, and call-ready news leverage.
+Sales teams waste hours manually researching and qualifying prospect lists. This workflow automates the entire process -- from raw company names to fully populated sales rows with AOS, website, and call-ready news leverage.
 
 Every Friday at 4pm it:
 
@@ -20,16 +20,18 @@ Every Friday at 4pm it:
 
 ## Workflow Architecture
 
+```
 Schedule Trigger (Friday 4pm)
-    └── Get rows from Raw List (blank status only)
-            └── Loop Over Items (one company at a time)
-                    └── Claude (qualify against ruleset)
-                            ├── [GREEN]  Perplexity (research company)
-                            │               └── Claude (format output)
-                            │                       └── Code node (parse JSON)
-                            │                               └── Append to Master Sheet
-                            │                                       └── Update Raw List: Checked + GREEN
-                            └── [NOT GREEN] Update Raw List: Checked + NOT GREEN
+└── Get rows from Raw List (blank status only)
+    └── Loop Over Items (one company at a time)
+        └── Claude (qualify against ruleset)
+            ├── [GREEN]  Perplexity (research company)
+            │   └── Claude (format output)
+            │       └── Code node (parse JSON)
+            │           └── Append to Master Sheet
+            │               └── Update Raw List: Checked + GREEN
+            └── [NOT GREEN] Update Raw List: Checked + NOT GREEN
+```
 
 Key design decisions:
 
@@ -51,7 +53,13 @@ Companies qualify as GREEN if they:
 
 Hard disqualifiers: consultancies, government bodies, universities, pure software vendors with no energy or industrial customer base.
 
-The ruleset is also available as a standalone PDF in this folder (Lead_Qualification_Ruleset_V1.2.pdf) for reference and adaptation to other verticals.
+The ruleset is also available as a standalone PDF in this folder (`Lead_Qualification_Ruleset_V1.2.pdf`) for reference and adaptation to other verticals.
+
+## Output
+
+![Master Sheet and Raw List](output_sheets.png)
+
+After each run, the Master Sheet is populated with qualified companies including AOS, website link, and news leverage ready for outreach. The Raw List is updated with a GREEN or NOT GREEN status on every processed company so nothing is processed twice.
 
 ## Stack
 
@@ -73,11 +81,11 @@ The ruleset is also available as a standalone PDF in this folder (Lead_Qualifica
 
 ### Installation
 
-1. Clone this repo
-2. Import AI Lead Qualification.json into your n8n instance via Workflows → Import
+1. Download `AI Lead Qualification.json`
+2. Import into your n8n instance via Workflows → Import
 3. Configure credentials in n8n:
-   - Anthropic: HTTP Header Auth (x-api-key: YOUR_ANTHROPIC_API_KEY, anthropic-version: 2023-06-01)
-   - Perplexity: HTTP Header Auth (Authorization: Bearer YOUR_PERPLEXITY_API_KEY)
+   - Anthropic: HTTP Header Auth (`x-api-key: YOUR_ANTHROPIC_API_KEY`, `anthropic-version: 2023-06-01`)
+   - Perplexity: HTTP Header Auth (`Authorization: Bearer YOUR_PERPLEXITY_API_KEY`)
    - Google Sheets: OAuth2
 4. Create a Google Sheet with two tabs:
    - Raw List: Company Name, Status, Output
@@ -87,13 +95,11 @@ The ruleset is also available as a standalone PDF in this folder (Lead_Qualifica
 
 ## How to Use
 
-1. Paste company names into the Raw List tab with blank Status and Output columns
+1. Paste raw company names into the Raw List tab with blank Status and Output columns
 2. The workflow runs automatically every Friday at 4pm
 3. Check the Master Sheet for qualified companies with research populated
 4. Check the Raw List for GREEN or NOT GREEN results on every processed company
 
-## Author
+---
 
-Nikhil Roy, Berlin-based operator with a background in project management, business development, and AI workflow automation.
-
-Portfolio: https://nikhilroy.lovable.app
+Built by [Nikhil Roy](https://nikhilroy.lovable.app), Berlin
