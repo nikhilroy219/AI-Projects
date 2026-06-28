@@ -1,0 +1,21 @@
+# Spendly Finance Ops AI Agent — dependencies
+# Install with: pip install -r requirements.txt
+
+# Telegram bot framework
+python-telegram-bot[job-queue]>=21.0
+
+# Anthropic Claude API
+anthropic>=0.40.0
+
+# Groq (voice transcription via Whisper)
+groq>=0.13.0
+
+# Text-to-speech
+edge-tts>=6.1.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Google Sheets access
+gspread>=6.0.0
+google-auth>=2.28.0
