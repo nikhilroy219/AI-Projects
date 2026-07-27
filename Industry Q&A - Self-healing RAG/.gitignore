@@ -1,0 +1,16 @@
+# Virtual environment
+venv/
+
+# Python
+__pycache__/
+*.pyc
+
+# Regeneratable pipeline artifacts (run the scripts to rebuild these)
+v1/extracted_text/
+v1/chunks.json
+v1/embeddings.npy
+v1/chroma_db/
+v2/chroma_db/
+
+# Never commit secrets
+.env
