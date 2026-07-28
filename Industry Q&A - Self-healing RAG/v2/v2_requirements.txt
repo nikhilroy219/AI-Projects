@@ -1,0 +1,8 @@
+langchain
+langchain-community
+langchain-classic
+langchain-huggingface
+langchain-chroma
+langchain-anthropic
+langgraph
+pypdf
