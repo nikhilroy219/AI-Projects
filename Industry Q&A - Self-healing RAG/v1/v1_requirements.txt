@@ -1,0 +1,6 @@
+anthropic
+chromadb
+pypdf
+pdfplumber
+sentence-transformers
+numpy
