@@ -1,6 +1,8 @@
 # Industry Intelligence Q&A: Self-Healing RAG
 
-This project started as a gap I needed to close - I had strong automation and orchestration experience from projects like JobOS and Jarvis, but zero hands-on experience with embeddings, vector databases, or retrieval evaluation. So I built a real, working RAG system from scratch to fix that: a question-answering tool grounded in 7 real EU and German energy policy documents, with a self-healing layer that catches its own weak or unsupported answers instead of confidently guessing. Built twice, once by hand in raw Python to learn the actual mechanics, once with LangChain and LangGraph to show the industry-standard tooling.
+A retrieval-augmented Q&A system that answers questions using only what it can find and cite in a set of source documents — and says so honestly when it can't find enough, instead of guessing. Built twice: once from scratch in raw Python to show the underlying mechanics end-to-end, once with LangChain and LangGraph to show the same system using production-grade tooling.
+
+This instance is grounded in 7 EU and German energy policy documents, but the pipeline is domain-agnostic — point it at any set of documents an organization can't hand to a general-purpose chatbot (internal policy, compliance filings, technical manuals, product documentation) and it answers the same way: grounded, cited, and honest about its own limits.
 
 ## What It Does
 
