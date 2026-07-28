@@ -83,8 +83,8 @@ Key design decisions:
 ```powershell
 python -m venv venv
 .\venv\Scripts\Activate.ps1
-pip install -r v1/requirements.txt
-pip install -r v2/requirements.txt
+pip install -r v1/v1_requirements.txt
+pip install -r v2/v2_requirements.txt
 ```
 
 Both versions share this one environment and reuse the same 7 source PDFs, stored once in `v1/source_docs/`.
